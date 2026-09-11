@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buffet Nitro - Sistema de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-image: url('https://cdn.pixabay.com/photo/2012/04/26/22/48/machu-picchu-43387_1280.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+        .transition-all-suave { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .hover-elevate:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .hover-scale:hover { transform: scale(1.02); }
+        .active-tab { border-bottom: 3px solid #6b21a8; font-weight: bold; color: #6b21a8; }
+        .hidden { display: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(107, 33, 168, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 33, 168, 0.5); }
+        .ciclo-info { font-size: 9px; color: #64748b; font-weight: 400; margin-left: 8px; }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-slate-900">
+
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-4 relative">
+        <div class="flex flex-col items-center mb-0 w-full max-w-sm">
+            <div class="glass-card p-5 rounded-3xl rounded-br-none border-white/40 shadow-xl -mb-32 relative">
+                <p class="text-sm font-bold text-slate-800 italic leading-tight text-center">
+                    ¡Hola, colega! 👋 <br> 
+                    ¡Elige tu menú de hoy antes que pase el horario de votación!
+                </p>
+                <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-white/40"></div>
+            </div>
+            <img src="https://i.ibb.co/N25tQ11y/Dise-o-sin-t-t-lo-Photoroom-1.png" 
+                 class="w-72 md:w-96 h-auto filter drop-shadow-xl" alt="Mascota Nitro">
+        </div>
+        <div class="glass-card p-5 -mt-32 mb-10 rounded-3xl flex items-center justify-center border border-white/30 shadow-2xl">
+            <img src="https://nitro-tienda.com/web/image/website/1/logo/Nitro?unique=6d3069e" alt="Logo Nitro" class="h-14">
+        </div>
+        <div class="glass-card p-10 w-full max-w-md border border-white/20 transition-all-suave hover-elevate">
+            <h1 class="text-2xl font-black text-center text-slate-800 mb-8 tracking-tighter uppercase">Gestión de Comedor</h1>
+            <div class="space-y-5">
+                <input type="text" id="user-input" placeholder="Usuario" class="w-full p-4 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                <input type="password" id="pass-input" placeholder="Contraseña" class="w-full p-4 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                <button onclick="handleLogin()" class="w-full bg-purple-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-900 transition-all-suave transform hover:scale-[1.03]">INGRESAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <nav class="bg-white/10 backdrop-blur-lg text-slate-800 shadow-xl sticky top-0 z-50 border-b border-white/20">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <img src="https://nitro-tienda.com/web/image/website/1/logo/Nitro?unique=6d3069e" alt="Logo Nitro" class="h-9">
+                    <span class="font-medium text-xs text-purple-100 italic" id="welcome-msg"></span>
+                </div>
+                <div class="flex space-x-1 md:space-x-3 text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                    <button onclick="showSection('votar')" id="tab-votar" class="nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-all-suave">Votar</button>
+                    <button onclick="showSection('proponer')" id="tab-proponer" class="nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-all-suave">Propuestas</button>
+                    <button onclick="showSection('resultado')" id="tab-resultado" class="nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-all-suave">Resultados</button>
+                    <button onclick="showSection('gastos')" id="tab-gastos" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">💰 Gastos</button>
+                    <button onclick="showSection('reportes')" id="tab-reportes" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">📊 Reportes</button>
+                    <button id="admin-nav" onclick="showSection('admin')" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">Admin</button>
+                    <button onclick="logout()" class="text-purple-300 border-l border-purple-800 pl-3 hover:text-white transition-all-suave">Salir</button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-10">
+            
+            <section id="votar" class="section-content">
+                <header class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800 tracking-tighter">Menú de Mañana</h2>
+                    <p class="text-slate-600 text-sm mt-1">Selecciona tus preferencias para el mini-bufet.</p>
+                </header>
+                <div id="voto-dinamico-container" class="space-y-10">
+                    <form id="voteForm" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"></form>
+                    <button id="btn-votar" onclick="enviarVotos()" class="w-full max-w-xl mx-auto block bg-purple-800 text-white font-bold py-5 rounded-2xl shadow-xl hover:bg-purple-900 transition-all-suave transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                        <span class="text-xl">🚀</span> ENVIAR MI ELECCIÓN
+                    </button>
+                </div>
+            </section>
+
+            <section id="proponer" class="section-content hidden">
+                <div class="grid gap-10 md:grid-cols-2">
+                    <div>
+                        <h2 class="text-3xl font-bold mb-6 text-slate-800 tracking-tight">Nueva Propuesta</h2>
+                        <div class="glass-card p-8 space-y-5 transition-all-suave hover-elevate">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoría</label>
+                            <select id="prop-cat" class="w-full p-4 bg-white/60 border border-white/30 rounded-xl focus:ring-2 focus:ring-purple-400 transition-all-suave"></select>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre del Plato</label>
+                            <input type="text" id="prop-nombre" placeholder="¿Qué plato sugieres?" class="w-full p-4 bg-white/60 border border-white/30 rounded-xl focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                            <button onclick="subirPropuesta()" class="w-full bg-purple-800 text-white font-bold py-4 rounded-xl hover:bg-purple-900 transition-all-suave">POSTULAR PLATO</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-end mb-6">
+                            <h2 class="text-3xl font-bold text-slate-800 tracking-tight">Apoyar Ideas</h2>
+                            <span class="text-[10px] bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full font-bold uppercase tracking-tighter">2 Votos Semanales</span>
+                        </div>
+                        <div id="lista-propuestas" class="space-y-4 max-h-[600px] overflow-y-auto pr-3">
+                            <p class="text-center text-slate-500 py-10 animate-pulse glass-card rounded-2xl">Cargando propuestas...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="resultado" class="section-content hidden">
+                <header class="mb-10 flex justify-between items-end gap-4">
+                    <div>
+                        <h2 class="text-4xl font-black text-slate-800 tracking-tighter">Resultados del Día</h2>
+                        <p class="text-slate-600 text-sm mt-1">Opciones ganadoras para mañana (Ciclo 13:00 - 13:00).</p>
+                    </div>
+                    <button onclick="renderStats()" class="bg-purple-100 text-purple-800 px-5 py-3 rounded-xl text-xs font-bold hover:bg-purple-200 transition-all-suave flex items-center gap-2 whitespace-nowrap">
+                        REFRESCAR ↻
+                    </button>
+                </header>
+                <div id="votantes-card" class="hidden mb-10 glass-card p-6 border-white/40 border-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-2xl">👥</span>
+                        <h3 class="font-black text-slate-800 uppercase tracking-tighter">Votantes del Ciclo</h3>
+                        <span id="votantes-count" class="ml-auto bg-purple-100 text-purple-900 px-3 py-1 rounded-full text-xs font-bold">0</span>
+                    </div>
+                    <div id="lista-votantes" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div id="ultima-comida-card" class="hidden mb-10 glass-card p-6 border-white/40 border-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-2xl">🍽️</span>
+                        <h3 class="font-black text-slate-800 uppercase tracking-tighter">Última Comida Realizada</h3>
+                    </div>
+                    <div id="lista-menu-anterior" class="flex flex-wrap gap-4 text-xs font-bold"></div>
+                </div>
+                <div id="resultados-grid" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12"></div>
+                <div class="mt-12 glass-card p-8 pb-16 transition-all-suave hover-elevate">
+                    <h3 class="font-bold text-slate-500 uppercase text-[10px] mb-6 tracking-widest">Acumulado Histórico</h3>
+                    <div class="h-auto"><canvas id="statsChart"></canvas></div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- NUEVO: SECCIÓN GASTOS DE REFRIGERIO                          -->
+            <!-- ============================================================ -->
+            <section id="gastos" class="section-content hidden">
+                <header class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800 tracking-tighter">🍽️ Gastos del Refrigerio</h2>
+                    <p class="text-slate-600 text-sm mt-1">Registra comensales y gastos diarios del buffet. Presupuesto: S/ 5 por persona.</p>
+                </header>
+
+                <!-- Presupuesto del día -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
+                    <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">🥗 Presupuesto del día</h3>
+                    <div class="grid gap-4 md:grid-cols-3 items-end">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nº de comensales</label>
+                            <input type="number" id="g-num-comensales" min="0" value="0" step="1" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Presupuesto (S/)</label>
+                            <input type="text" id="g-presupuesto" readonly class="w-full p-3 bg-white/40 border border-white/30 rounded-xl font-bold outline-none text-purple-900">
+                        </div>
+                        <div>
+                            <button onclick="guardarComensales()" class="w-full bg-purple-800 text-white font-bold py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Actualizar presupuesto</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agregar gasto -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
+                    <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">➕ Agregar gasto</h3>
+                    <div class="grid gap-4 md:grid-cols-[1fr_2fr_1fr_auto] items-end">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha</label>
+                            <input type="date" id="g-fecha" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Concepto</label>
+                            <input type="text" id="g-concepto" placeholder="Ej. Compra de víveres" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monto (S/)</label>
+                            <input type="number" id="g-monto" min="0" step="0.01" placeholder="0.00" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <button onclick="agregarGasto()" class="bg-purple-800 text-white font-bold px-6 py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Agregar</button>
+                    </div>
+                </div>
+
+                <!-- Ahorro del día + lista -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                        <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día</h3>
+                        <span id="g-ahorro" class="text-3xl font-black text-slate-800">0.00 S/</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-72 overflow-y-auto rounded-xl bg-white/20">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-purple-950/5 text-purple-900 font-bold uppercase text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-3">Fecha</th>
+                                    <th class="p-3">Concepto</th>
+                                    <th class="p-3 text-right">Monto (S/)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="g-tabla-hoy" class="bg-white/30"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- NUEVO: SECCIÓN REPORTES DE GASTOS                            -->
+            <!-- ============================================================ -->
+            <section id="reportes" class="section-content hidden">
+                <header class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800 tracking-tighter">📊 Reportes de Gastos</h2>
+                    <p class="text-slate-600 text-sm mt-1">Indicadores del refrigerio por rango de fechas y del mes en curso.</p>
+                </header>
+
+                <!-- Filtro por rango -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
+                    <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">🔍 Filtrar por rango</h3>
+                    <div class="grid gap-4 md:grid-cols-[1fr_1fr_auto] items-end mb-8">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Desde</label>
+                            <input type="date" id="r-desde" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hasta</label>
+                            <input type="date" id="r-hasta" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
+                        <button onclick="renderReportesSeccion()" class="bg-purple-800 text-white font-bold px-6 py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Aplicar</button>
+                    </div>
+                    <div class="grid gap-6 md:grid-cols-3">
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Gasto total</div>
+                            <div id="r-filtro-total" class="text-3xl font-black text-slate-800">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Per cápita</div>
+                            <div id="r-filtro-percapita" class="text-3xl font-black text-slate-800">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Ahorro</div>
+                            <div id="r-filtro-ahorro" class="text-3xl font-black text-green-600">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mes en curso -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
+                    <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">📆 Indicadores del mes en curso</h3>
+                    <div class="grid gap-6 md:grid-cols-3">
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Gasto total</div>
+                            <div id="r-mes-total" class="text-3xl font-black text-slate-800">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Per cápita</div>
+                            <div id="r-mes-percapita" class="text-3xl font-black text-slate-800">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                        <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
+                            <div class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-1">Ahorro</div>
+                            <div id="r-mes-ahorro" class="text-3xl font-black text-green-600">0.00</div>
+                            <div class="text-[10px] text-slate-500 uppercase">Soles</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="admin" class="section-content hidden">
+                <h2 class="text-3xl font-bold mb-8 italic text-purple-800 tracking-tight">Panel de Control RRHH</h2>
+                <div class="mb-10">
+                    <h3 class="font-bold text-slate-500 text-xs uppercase mb-4 tracking-widest">Gestión de Personal</h3>
+                    <div class="glass-card rounded-2xl overflow-hidden transition-all-suave hover-elevate">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-purple-950/5 text-purple-900 font-bold uppercase text-[10px]">
+                                    <tr><th class="p-5">Usuario</th><th class="p-5">Nombre</th><th class="p-5">Rol</th><th class="p-5 text-center">Acción</th></tr>
+                                </thead>
+                                <tbody id="userTableBody" class="bg-white/30"></tbody>
+                            </table>
+                        </div>
+                        <div class="p-5 bg-white/20 border-t border-white/20 flex flex-wrap gap-3">
+                            <input type="text" id="nu" placeholder="Usuario" class="p-3 bg-white/60 border border-white/30 rounded-xl text-sm flex-1 outline-none">
+                            <input type="text" id="nc" placeholder="Clave" class="p-3 bg-white/60 border border-white/30 rounded-xl text-sm flex-1 outline-none">
+                            <input type="text" id="nn" placeholder="Nombre" class="p-3 bg-white/60 border border-white/30 rounded-xl text-sm flex-1 outline-none">
+                            <select id="nr" class="p-3 bg-white/60 border border-white/30 rounded-xl text-sm outline-none"><option value="USER">USER</option><option value="ADMIN">ADMIN</option></select>
+                            <button onclick="addUser()" class="bg-purple-800 text-white px-6 py-3 rounded-xl font-bold text-sm w-full md:w-auto hover:bg-purple-900 transition-all-suave">Añadir</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-12">
+                    <h3 class="font-bold text-slate-500 text-xs uppercase mb-4 tracking-widest">Gestión del Menú (Opciones)</h3>
+                    <div class="glass-card rounded-2xl p-6 transition-all-suave hover-elevate">
+                        <div id="admin-menu-container" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8"></div>
+                        <div class="p-5 bg-white/20 border-t border-white/20 rounded-xl flex flex-wrap gap-3 items-end">
+                            <div class="flex-1 min-w-[150px]">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Categoría</label>
+                                <select id="new-opt-cat" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl text-sm focus:ring-2 focus:ring-purple-400 outline-none"></select>
+                            </div>
+                            <div class="flex-[2] min-w-[200px]">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Nuevo Plato</label>
+                                <input type="text" id="new-opt-nombre" placeholder="Ej: Lomo Saltado" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl text-sm outline-none">
+                            </div>
+                            <button onclick="addOption()" class="bg-purple-800 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-purple-900 transition-all-suave h-[46px]">Añadir Plato</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyJe8YvqCHyq-R4SlGE0KwvMYrWF4OItpeYUh_R4TcTusj0H4n9B9KtpukpObQBpSM/exec"; 
+        let currentUser = JSON.parse(localStorage.getItem('buffet_session'));
+        let sessionVerificationInterval = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (currentUser) loginSuccess(currentUser);
+        });
+
+        // =============================================
+        // VERIFICAR SESIÓN VÁLIDA
+        // =============================================
+        async function verificarSesionValida() {
+            if (!currentUser) return false;
+            try {
+                const res = await fetch(API_URL + "?action=check_usuario_existe&usuario=" + currentUser.usuario);
+                const data = await res.json();
+                if (!data.success || !data.existe) {
+                    alert("⚠️ Tu usuario ha sido desactivado. Contacta a RRHH.");
+                    logout();
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error("Error verificando sesión:", e);
+                return true;
+            }
+        }
+
+        async function handleLogin() {
+            const usuario = document.getElementById('user-input').value;
+            const clave = document.getElementById('pass-input').value;
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'login', usuario, clave })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const session = { usuario, nombre: data.nombre, rol: data.rol };
+                localStorage.setItem('buffet_session', JSON.stringify(session));
+                loginSuccess(session);
+            } else { alert("❌ " + data.message); }
+        }
+
+        function loginSuccess(session) {
+            currentUser = session;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = `👋 Hola, ${session.nombre}`;
+            if (session.rol === 'ADMIN') {
+                document.getElementById('admin-nav').classList.remove('hidden');
+                document.getElementById('tab-gastos').classList.remove('hidden');
+                document.getElementById('tab-reportes').classList.remove('hidden');
+                fetchGastosData(); // Cargar datos de gastos al iniciar
+            }
+            fetchData();
+            showSection('votar');
+            
+            if (sessionVerificationInterval) clearInterval(sessionVerificationInterval);
+            sessionVerificationInterval = setInterval(async () => {
+                await verificarSesionValida();
+            }, 30000);
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch(API_URL + "?action=get_opciones");
+                const json = await res.json();
+                renderMenu(json.data);
+                if (currentUser && currentUser.rol === 'ADMIN') {
+                    renderMenuAdmin(json.data); 
+                    const userRes = await fetch(API_URL + "?action=get_usuarios");
+                    const userData = await userRes.json();
+                    renderUsers(userData.users);
+                }
+            } catch (e) {
+                console.error("Error detallado:", e);
+                alert("Error de sincronización con el servidor.");
+            }
+        }
+
+        function renderMenu(menu) {
+            const form = document.getElementById('voteForm');
+            const propCat = document.getElementById('prop-cat');
+            if (form) form.innerHTML = ''; 
+            if (propCat) propCat.innerHTML = '';
+            for (const cat in menu) {
+                if (form) {
+                    const div = document.createElement('div');
+                    div.className = "glass-card p-6 border border-white/30 transition-all-suave hover-elevate";
+                    div.innerHTML = `<label class="block font-black mb-3 text-purple-900 text-[10px] uppercase tracking-widest">${cat}</label>
+                        <select name="${cat}" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave" required>
+                        <option value="">Seleccionar...</option>
+                        ${menu[cat].map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+                    form.appendChild(div);
+                }
+                if (propCat) propCat.innerHTML += `<option value="${cat}">${cat}</option>`;
+            }
+        }
+
+        async function enviarVotos() {
+            if (!await verificarSesionValida()) return;
+            const btn = document.getElementById('btn-votar');
+            const formElement = document.getElementById('voteForm');
+            const formData = new FormData(formElement);
+            const selecciones = Object.fromEntries(formData);
+            if (Object.values(selecciones).some(v => v === "")) {
+                return alert("⚠️ Por favor, selecciona una opción en cada categoría antes de enviar.");
+            }
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'votar', usuario: currentUser.usuario, selecciones })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ ¡Voto registrado con éxito! Buen provecho.");
+                    mostrarMensajeYaVoto();
+                } else {
+                    alert(data.message);
+                    if (data.message.includes("Ya registraste") || data.message.includes("vivo")) {
+                        mostrarMensajeYaVoto();
+                    } else {
+                        if (btn) btn.disabled = false;
+                    }
+                }
+            } catch (e) {
+                alert("Error de conexión. Revisa tu internet e intenta de nuevo.");
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function cargarPropuestasParaVotar() {
+            const container = document.getElementById('lista-propuestas');
+            container.innerHTML = '<p class="text-center text-slate-500 py-10 animate-pulse">Cargando...</p>';
+            try {
+                const res = await fetch(API_URL + "?action=get_propuestas");
+                const json = await res.json();
+                if(json.success && json.propuestas.length > 0) {
+                    container.innerHTML = '';
+                    json.propuestas.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = "glass-card p-4 flex justify-between items-center transition-all-suave hover-scale";
+                        div.innerHTML = `
+                            <div class="flex-1">
+                                <p class="text-[9px] font-bold text-purple-800 uppercase">${p.categoria}</p>
+                                <p class="font-bold text-slate-800 text-sm">${p.nombre}</p>
+                                <p class="text-[9px] text-slate-500">Por: ${p.autor} | ${p.votos} Apoyos</p>
+                            </div>
+                            <button onclick="apoyarPropuesta(${p.id})" class="bg-purple-100 text-purple-900 px-4 py-2 rounded-lg text-[10px] font-black hover:bg-purple-800 hover:text-white transition">Apoyar</button>`;
+                        container.appendChild(div);
+                    });
+                } else { container.innerHTML = '<p class="text-center text-slate-500 py-10">Sin propuestas.</p>'; }
+            } catch (e) { container.innerHTML = '<p class="text-center text-red-400 py-10">Error.</p>'; }
+        }
+
+        async function apoyarPropuesta(filaId) {
+            if (!await verificarSesionValida()) return;
+            if(!confirm("¿Deseas apoyar esta propuesta?")) return;
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'votar_propuesta', usuario: currentUser.usuario, filaPropuesta: filaId })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if(data.success) cargarPropuestasParaVotar();
+        }
+
+        async function subirPropuesta() {
+            if (!await verificarSesionValida()) return;
+            const categoria = document.getElementById('prop-cat').value;
+            const nombre = document.getElementById('prop-nombre').value;
+            if(!nombre) return alert("Escribe el nombre del plato.");
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'proponer', usuario: currentUser.usuario, categoria, nombre })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if(data.success) { document.getElementById('prop-nombre').value = ''; cargarPropuestasParaVotar(); }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = users.map(u => `
+                <tr class="border-b border-white/10 hover:bg-white/10 transition">
+                    <td class="p-5 font-bold text-slate-800">${u[0]}</td><td class="p-5 text-slate-700">${u[2]}</td><td class="p-5"><span class="px-2 py-1 rounded text-[10px] font-bold ${u[3] === 'ADMIN' ? 'bg-purple-200 text-purple-900' : 'bg-slate-100 text-slate-600'}">${u[3]}</span></td>
+                    <td class="p-5 text-center"><button onclick="deleteUser('${u[0]}')" class="text-red-500 hover:text-red-700 font-bold text-xs uppercase">Eliminar</button></td>
+                </tr>`).join('');
+        }
+
+        async function addUser() {
+            const u = document.getElementById('nu').value, c = document.getElementById('nc').value, n = document.getElementById('nn').value, r = document.getElementById('nr').value;
+            if(!u || !c || !n) return alert("Completa los datos.");
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'crud_usuarios', subAction: 'agregar', u, c, n, r }) });
+            fetchData();
+        }
+
+        async function deleteUser(u) {
+            if (!confirm(`¿Eliminar al colaborador ${u}?`)) return;
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'crud_usuarios', subAction: 'eliminar', u }) });
+            fetchData();
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-tab'));
+            const tab = document.getElementById('tab-' + id);
+            if(tab) tab.classList.add('active-tab');
+
+            const ahora = new Date();
+            const hora = ahora.getHours();
+            const container = document.getElementById('voto-dinamico-container');
+
+            if (id === 'votar') {
+                if (container) container.classList.add('hidden');
+                const horaVotacion = hora + (ahora.getMinutes() / 60);
+                const puedeVotar = (horaVotacion >= 13) && (horaVotacion <= 16.66);
+                if (!puedeVotar && currentUser.rol !== 'ADMIN') {
+                    if (container) {
+                        container.classList.remove('hidden');
+                        container.innerHTML = `<div class="col-span-full glass-card p-10 text-center border-white/20"><p class="text-5xl mb-4">🙄</p><h3 class="text-2xl font-black text-slate-800 mb-2 uppercase">¡AH! ¿AHORA SI QUIERES VOTAR?</h3><p class="text-slate-600 font-medium italic text-sm">Espera el horario establecido, colega.</p><div class="mt-6 inline-block bg-purple-800 px-4 py-2 rounded-full text-xs font-bold text-white uppercase shadow-md">Horario: 13:00 PM - 16:40 PM</div></div>`;
+                    }
+                    return;
+                } else {
+                    fetch(API_URL + "?action=check_voto_usuario&usuario=" + currentUser.usuario)
+                        .then(res => res.json())
+                        .then(data => { 
+                            if (container) container.classList.remove('hidden');
+                            if (data.yaVoto) mostrarMensajeYaVoto();
+                        });
+                }
+            }
+            if(id === 'resultado') renderStats();
+            if(id === 'proponer') cargarPropuestasParaVotar();
+            if(id === 'gastos') renderGastosSeccion();
+            if(id === 'reportes') renderReportesSeccion();
+        }
+
+        async function renderStats() {
+            const grid = document.getElementById('resultados-grid');
+            const ultimaComidaCont = document.getElementById('ultima-comida-card');
+            const votantesCard = document.getElementById('votantes-card');
+            const listaVotantes = document.getElementById('lista-votantes');
+            const votantesCount = document.getElementById('votantes-count');
+            grid.innerHTML = '<p class="col-span-full text-center text-purple-900 py-10 animate-bounce font-bold">Calculando podios...</p>';
+            try {
+                const resVotantes = await fetch(API_URL + "?action=get_votantes_hoy");
+                const jsonVotantes = await resVotantes.json();
+                if (jsonVotantes.success && jsonVotantes.votantes.length > 0) {
+                    votantesCard.classList.remove('hidden');
+                    if (jsonVotantes.ciclo) {
+                        const inicio = new Date(jsonVotantes.ciclo.inicio);
+                        const fin = new Date(jsonVotantes.ciclo.fin);
+                        const inicioStr = inicio.toLocaleString('es-PE', { hour12: true, hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+                        const finStr = fin.toLocaleString('es-PE', { hour12: true, hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+                        const header = votantesCard.querySelector('.flex.items-center.gap-3.mb-4');
+                        if (header) {
+                            const oldCicloInfo = header.querySelector('.ciclo-info');
+                            if (oldCicloInfo) oldCicloInfo.remove();
+                            const cicloInfo = document.createElement('span');
+                            cicloInfo.className = 'ciclo-info';
+                            cicloInfo.textContent = `🔄 ${inicioStr} - ${finStr}`;
+                            header.appendChild(cicloInfo);
+                        }
+                    }
+                    const votaron = jsonVotantes.votantes.filter(v => v.voto === true);
+                    const noVotaron = jsonVotantes.votantes.filter(v => v.voto === false);
+                    votantesCount.textContent = `${votaron.length} ✅ / ${noVotaron.length} ❌`;
+                    listaVotantes.innerHTML = jsonVotantes.votantes.map(v => {
+                        const claseColor = v.voto ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300';
+                        const icono = v.voto ? '✅' : '❌';
+                        return `<span class="px-4 py-2 rounded-full border text-sm font-medium ${claseColor}">${icono} ${v.nombre}</span>`;
+                    }).join('');
+                } else { votantesCard.classList.add('hidden'); }
+
+                const resAnterior = await fetch(API_URL + "?action=get_ultima_comida");
+                const jsonAnterior = await resAnterior.json();
+                if (jsonAnterior.success && Object.keys(jsonAnterior.menuAnterior).length > 0) {
+                    ultimaComidaCont.classList.remove('hidden');
+                    document.getElementById('lista-menu-anterior').innerHTML = Object.entries(jsonAnterior.menuAnterior).map(([cat, plato]) => `
+                        <div class="bg-white/40 px-3 py-2 rounded-lg border border-white/20">
+                            <span class="text-purple-900 block text-[9px] font-black uppercase">${cat}</span>
+                            <span class="text-slate-800 text-sm font-bold">${plato}</span>
+                        </div>`).join('');
+                } else { ultimaComidaCont.classList.add('hidden'); }
+
+                const res = await fetch(API_URL + "?action=get_resultados_dia");
+                const json = await res.json();
+                if (json.success && Object.keys(json.resultados).length > 0) {
+                    grid.innerHTML = '';
+                    for (const categoria in json.resultados) {
+                        const card = document.createElement('div');
+                        card.className = "glass-card p-6 flex flex-col h-full border border-white/30 transition-all-suave hover-elevate";
+                        card.innerHTML = `<div class="mb-4"><span class="bg-purple-100 text-purple-900 text-[10px] font-black px-3 py-1 rounded-full uppercase">${categoria}</span></div>
+                            <div class="space-y-4 flex-grow">${json.resultados[categoria].map((p, index) => `
+                                <div class="flex justify-between items-center p-3 rounded-xl transition ${index === 0 ? 'bg-purple-800/80 text-white shadow-lg' : 'bg-white/40 text-slate-800'}">
+                                    <div class="flex items-center gap-3"><span class="text-xl">${index === 0 ? '🥇' : '🥈'}</span><span class="text-sm font-bold">${p.nombre}</span></div>
+                                    <span class="text-[10px] font-black px-2 py-1 rounded-md shadow-inner ${index === 0 ? 'bg-white/20 text-white' : 'bg-white/80 text-purple-900'}">${p.votos} VOTOS</span>
+                                </div>`).join('')}</div>`;
+                        grid.appendChild(card);
+                    }
+                } else { grid.innerHTML = '<p class="col-span-full text-center text-slate-500 py-10">Sin votos registrados.</p>'; }
+            } catch (e) { 
+                console.error("Error en renderStats:", e);
+                grid.innerHTML = '<p class="col-span-full text-center text-red-400 py-10">Error de conexión.</p>'; 
+            }
+
+            try {
+                const histRes = await fetch(API_URL + "?action=get_stats");
+                const histData = await histRes.json();
+                const statsContainer = document.getElementById('statsChart').parentElement;
+                statsContainer.innerHTML = `<h3 class="font-bold text-slate-500 uppercase text-[10px] mb-6 tracking-widest text-center">Top 5 Histórico</h3>
+                    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">${Object.entries(histData.stats).map(([cat, platos]) => `
+                        <div class="bg-white/20 p-4 rounded-2xl border border-white/10 transition-all-suave hover-elevate">
+                            <p class="text-[9px] font-black text-purple-900 uppercase mb-3 border-b border-purple-900/10 pb-1">${cat}</p>
+                            <div class="space-y-2">${platos.map((p, i) => `
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-700 truncate mr-2"><span class="font-bold text-purple-800">${i + 1}.</span> ${p.nombre}</span>
+                                    <span class="bg-purple-900/10 px-2 py-0.5 rounded text-purple-900 font-bold">${p.votos}</span>
+                                </div>`).join('')}</div></div>`).join('')}</div>`;
+            } catch (e) {
+                console.error("Error cargando histórico:", e);
+            }
+        }
+
+        function renderMenuAdmin(menu) {
+            const container = document.getElementById('admin-menu-container');
+            const selectAdd = document.getElementById('new-opt-cat');
+            container.innerHTML = ''; selectAdd.innerHTML = '';
+            for (const cat in menu) {
+                selectAdd.innerHTML += `<option value="${cat}">${cat}</option>`;
+                const card = document.createElement('div');
+                card.className = "bg-white/30 p-4 rounded-xl border border-white/20";
+                card.innerHTML = `<p class="text-[10px] font-black text-purple-900 uppercase mb-3 border-b border-purple-900/10 pb-1">${cat}</p>
+                    <div class="space-y-2">${menu[cat].map(plato => `
+                        <div class="flex justify-between items-center text-xs bg-white/40 p-2 rounded-lg group">
+                            <span class="text-slate-700 font-medium">${plato}</span>
+                            <button onclick="deleteOption('${cat}', '${plato}')" class="text-red-400 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                        </div>`).join('')}</div>`;
+                container.appendChild(card);
+            }
+        }
+
+        async function addOption() {
+            const categoria = document.getElementById('new-opt-cat').value, nombre = document.getElementById('new-opt-nombre').value;
+            if(!nombre) return alert("Escribe el nombre del plato.");
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'crud_admin', subAction: 'agregar', categoria, nombre }) });
+            const data = await res.json();
+            if(data.success) { document.getElementById('new-opt-nombre').value = ''; fetchData(); }
+        }
+
+        async function deleteOption(categoria, nombre) {
+            if(!confirm(`¿Eliminar "${nombre}"?`)) return;
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'crud_admin', subAction: 'eliminar', categoria, nombre }) });
+            const data = await res.json();
+            if(data.success) fetchData();
+        }
+
+        function mostrarMensajeYaVoto() {
+            const container = document.getElementById('voto-dinamico-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="col-span-full glass-card p-10 text-center border-white/20 animate-all-suave">
+                        <p class="text-6xl mb-4">🤨</p>
+                        <h3 class="text-2xl font-black text-slate-800 mb-2 uppercase tracking-tight">¡No seas vivo, YA VOTASTE COLEGA!</h3>
+                        <p class="text-slate-600 font-medium italic text-sm">Tu elección ya está en manos del chef. No puedes votar dos veces en el mismo ciclo.</p>
+                        <div class="mt-8 inline-block bg-purple-900 px-6 py-3 rounded-full text-xs font-bold text-white uppercase tracking-widest shadow-lg">
+                            Puedes volver a votar mañana a las 13:00 PM
+                        </div>
+                    </div>
+                `;
+                const btn = document.getElementById('btn-votar');
+                if(btn) btn.classList.add('hidden');
+            }
+        }
+        
+        function logout() { 
+            localStorage.removeItem('buffet_session');
+            if (sessionVerificationInterval) {
+                clearInterval(sessionVerificationInterval);
+                sessionVerificationInterval = null;
+            }
+            location.reload(); 
+        }
+
+        // ============================================================
+        // MÓDULO NUEVO: GASTOS DE REFRIGERIO
+        // ============================================================
+        const PRESUPUESTO_X_PERSONA = 5;
+        let gastosState = { gastos: [], comensales: {} };
+
+        function getHoyStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+        const fmtSoles = n => Number(n).toFixed(2);
+
+        async function fetchGastosData() {
+            try {
+                const res = await fetch(API_URL + "?action=getGastosRefrigerio");
+                const data = await res.json();
+                if (data.success) {
+                    gastosState.gastos = data.gastos || [];
+                    gastosState.comensales = data.comensales || {};
+                }
+            } catch(e) { console.error("Error gastos:", e); }
+        }
+
+        const getComensalesPorFecha = f => gastosState.comensales[f] || 0;
+        const getGastosPorFecha = f => gastosState.gastos.filter(g => g.fecha === f);
+        const getPresupuestoDiario = f => getComensalesPorFecha(f) * PRESUPUESTO_X_PERSONA;
+
+        function getGastosEnRango(desde, hasta) {
+            if (!desde && !hasta) return gastosState.gastos;
+            return gastosState.gastos.filter(g => {
+                if (desde && g.fecha < desde) return false;
+                if (hasta && g.fecha > hasta) return false;
+                return true;
+            });
+        }
+
+        function calcularIndicadoresGastos(desde, hasta) {
+            const gastos = getGastosEnRango(desde, hasta);
+            const totalGasto = gastos.reduce((s,g) => s + Number(g.monto), 0);
+            const fechas = new Set(gastos.map(g => g.fecha));
+            Object.keys(gastosState.comensales).forEach(f => {
+                if ((!desde || f >= desde) && (!hasta || f <= hasta)) fechas.add(f);
+            });
+            let totalComensales = 0, presupuestoTotal = 0;
+            fechas.forEach(f => {
+                totalComensales += getComensalesPorFecha(f);
+                presupuestoTotal += getPresupuestoDiario(f);
+            });
+            return {
+                totalGasto,
+                perCapita: totalComensales > 0 ? totalGasto / totalComensales : 0,
+                ahorro: presupuestoTotal - totalGasto
+            };
+        }
+
+        function renderGastosSeccion() {
+            const hoy = getHoyStr();
+            const fechaInput = document.getElementById('g-fecha');
+            if (fechaInput && !fechaInput.value) fechaInput.value = hoy;
+
+            const numInput = document.getElementById('g-num-comensales');
+            const presupuestoInput = document.getElementById('g-presupuesto');
+            // Si aún no hay valor cargado, tomamos el guardado para hoy
+            if (numInput && (!numInput.value || numInput.value === '0')) {
+                numInput.value = getComensalesPorFecha(hoy);
+            }
+            const num = parseInt(numInput?.value) || 0;
+            if (presupuestoInput) presupuestoInput.value = fmtSoles(num * PRESUPUESTO_X_PERSONA);
+
+            const ahorro = getPresupuestoDiario(hoy) - getGastosPorFecha(hoy).reduce((s,g) => s + Number(g.monto), 0);
+            const ahorroEl = document.getElementById('g-ahorro');
+            if (ahorroEl) {
+                ahorroEl.textContent = fmtSoles(ahorro) + ' S/';
+                ahorroEl.className = 'text-3xl font-black ' + (ahorro >= 0 ? 'text-green-600' : 'text-red-600');
+            }
+
+            const tbody = document.getElementById('g-tabla-hoy');
+            if (tbody) {
+                const gastosHoy = getGastosPorFecha(hoy);
+                tbody.innerHTML = gastosHoy.length === 0
+                    ? '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos registrados hoy</td></tr>'
+                    : gastosHoy.map(g => `
+                        <tr class="border-b border-white/10">
+                            <td class="p-3 text-sm">${g.fecha}</td>
+                            <td class="p-3 text-sm">${g.concepto || ''}</td>
+                            <td class="p-3 text-sm text-right font-bold">${fmtSoles(g.monto)}</td>
+                        </tr>`).join('');
+            }
+        }
+
+        function renderReportesSeccion() {
+            const desdeInput = document.getElementById('r-desde');
+            const hastaInput = document.getElementById('r-hasta');
+            // Defaults si están vacíos
+            if (desdeInput && !desdeInput.value) {
+                const d = new Date(); d.setDate(d.getDate() - 30);
+                desdeInput.value = d.toISOString().slice(0,10);
+            }
+            if (hastaInput && !hastaInput.value) hastaInput.value = getHoyStr();
+
+            const desde = desdeInput.value, hasta = hastaInput.value;
+            if (desde && hasta) {
+                const ind = calcularIndicadoresGastos(desde, hasta);
+                document.getElementById('r-filtro-total').textContent = fmtSoles(ind.totalGasto);
+                document.getElementById('r-filtro-percapita').textContent = fmtSoles(ind.perCapita);
+                const ahorroEl = document.getElementById('r-filtro-ahorro');
+                ahorroEl.textContent = fmtSoles(ind.ahorro);
+                ahorroEl.className = 'text-3xl font-black ' + (ind.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
+            }
+
+            const d = new Date();
+            const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0');
+            const ultimo = new Date(y, d.getMonth()+1, 0).getDate();
+            const indMes = calcularIndicadoresGastos(`${y}-${m}-01`, `${y}-${m}-${String(ultimo).padStart(2,'0')}`);
+            document.getElementById('r-mes-total').textContent = fmtSoles(indMes.totalGasto);
+            document.getElementById('r-mes-percapita').textContent = fmtSoles(indMes.perCapita);
+            const mesAhorroEl = document.getElementById('r-mes-ahorro');
+            mesAhorroEl.textContent = fmtSoles(indMes.ahorro);
+            mesAhorroEl.className = 'text-3xl font-black ' + (indMes.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+
+        async function guardarComensales() {
+            const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
+            const fecha = getHoyStr();
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'setComensalesRefrigerio', fecha, num })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    gastosState.gastos = data.gastos || [];
+                    gastosState.comensales = data.comensales || {};
+                    renderGastosSeccion();
+                } else {
+                    alert(data.message || "Error al guardar");
+                }
+            } catch(e) {
+                alert("Error de conexión");
+            }
+        }
+
+        async function agregarGasto() {
+            const fecha = document.getElementById('g-fecha').value;
+            const concepto = document.getElementById('g-concepto').value.trim();
+            const monto = parseFloat(document.getElementById('g-monto').value);
+
+            if (!fecha) return alert("Selecciona una fecha");
+            if (!concepto) return alert("Ingresa un concepto");
+            if (isNaN(monto) || monto <= 0) return alert("Ingresa un monto válido");
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'addGastoRefrigerio', fecha, concepto, monto })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    gastosState.gastos = data.gastos || [];
+                    gastosState.comensales = data.comensales || {};
+                    document.getElementById('g-concepto').value = '';
+                    document.getElementById('g-monto').value = '';
+                    renderGastosSeccion();
+                    renderReportesSeccion();
+                } else {
+                    alert(data.message || "Error al guardar");
+                }
+            } catch(e) {
+                alert("Error de conexión");
+            }
+        }
+    </script>
+</body>
+</html>
