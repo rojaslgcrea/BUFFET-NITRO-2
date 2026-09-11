@@ -152,7 +152,7 @@
             </section>
 
             <!-- ============================================================ -->
-            <!-- NUEVO: SECCIÓN GASTOS DE REFRIGERIO                          -->
+            <!-- SECCIÓN GASTOS DE REFRIGERIO (CON STAGING)                    -->
             <!-- ============================================================ -->
             <section id="gastos" class="section-content hidden">
                 <header class="mb-10">
@@ -163,22 +163,22 @@
                 <!-- Presupuesto del día -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">🥗 Presupuesto del día</h3>
-                    <div class="grid gap-4 md:grid-cols-3 items-end">
+                    <div class="grid gap-4 md:grid-cols-4 items-end">
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nº de comensales</label>
-                            <input type="number" id="g-num-comensales" min="0" value="0" step="1" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                            <input type="number" id="g-num-comensales" min="0" step="1" placeholder="0" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
                         </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Presupuesto (S/)</label>
-                            <input type="text" id="g-presupuesto" readonly class="w-full p-3 bg-white/40 border border-white/30 rounded-xl font-bold outline-none text-purple-900">
+                            <input type="text" id="g-presupuesto" readonly placeholder="0.00" class="w-full p-3 bg-white/40 border border-white/30 rounded-xl font-bold outline-none text-purple-900">
                         </div>
-                        <div>
-                            <button onclick="guardarComensales()" class="w-full bg-purple-800 text-white font-bold py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Actualizar presupuesto</button>
-                        </div>
+                        <button onclick="calcularPresupuesto()" class="bg-purple-100 text-purple-900 font-bold py-3 rounded-xl hover:bg-purple-200 transition-all-suave">Calcular</button>
+                        <button onclick="guardarComensales()" class="bg-purple-800 text-white font-bold py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Guardar</button>
                     </div>
+                    <p id="g-comensales-guardados" class="text-[10px] text-slate-500 italic mt-3"></p>
                 </div>
 
-                <!-- Agregar gasto -->
+                <!-- Agregar gasto + Staging -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">➕ Agregar gasto</h3>
                     <div class="grid gap-4 md:grid-cols-[1fr_2fr_1fr_auto] items-end">
@@ -194,14 +194,41 @@
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monto (S/)</label>
                             <input type="number" id="g-monto" min="0" step="0.01" placeholder="0.00" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
                         </div>
-                        <button onclick="agregarGasto()" class="bg-purple-800 text-white font-bold px-6 py-3 rounded-xl hover:bg-purple-900 transition-all-suave">Agregar</button>
+                        <button onclick="anadirGastoStaging()" class="bg-purple-100 text-purple-900 font-bold px-6 py-3 rounded-xl hover:bg-purple-200 transition-all-suave">Añadir</button>
+                    </div>
+
+                    <!-- Lista temporal: gastos por grabar -->
+                    <div class="mt-8 border-t border-white/20 pt-5">
+                        <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                            <h4 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">📋 Gastos por grabar (aún no guardados)</h4>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total:</span>
+                                    <span id="g-staging-total" class="text-2xl font-black text-purple-900">0.00 S/</span>
+                                </div>
+                                <button onclick="grabarGastos()" id="g-btn-grabar" disabled class="bg-purple-800 text-white font-bold px-6 py-2 rounded-xl hover:bg-purple-900 transition-all-suave disabled:opacity-50 disabled:cursor-not-allowed">Grabar</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto max-h-56 overflow-y-auto rounded-xl bg-white/20">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-purple-950/5 text-purple-900 font-bold uppercase text-[10px] sticky top-0">
+                                    <tr>
+                                        <th class="p-2">Fecha</th>
+                                        <th class="p-2">Concepto</th>
+                                        <th class="p-2 text-right">Monto (S/)</th>
+                                        <th class="p-2 text-center">Quitar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="g-staging-tabla" class="bg-white/30"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Ahorro del día + lista -->
+                <!-- Ahorro del día (gastos YA grabados) -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
                     <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
-                        <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día</h3>
+                        <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día (gastos grabados)</h3>
                         <span id="g-ahorro" class="text-3xl font-black text-slate-800">0.00 S/</span>
                     </div>
                     <div class="overflow-x-auto max-h-72 overflow-y-auto rounded-xl bg-white/20">
@@ -220,7 +247,7 @@
             </section>
 
             <!-- ============================================================ -->
-            <!-- NUEVO: SECCIÓN REPORTES DE GASTOS                            -->
+            <!-- SECCIÓN REPORTES DE GASTOS                                    -->
             <!-- ============================================================ -->
             <section id="reportes" class="section-content hidden">
                 <header class="mb-10">
@@ -380,7 +407,8 @@
                 document.getElementById('admin-nav').classList.remove('hidden');
                 document.getElementById('tab-gastos').classList.remove('hidden');
                 document.getElementById('tab-reportes').classList.remove('hidden');
-                fetchGastosData(); // Cargar datos de gastos al iniciar
+                fetchGastosData();
+                renderStaging();
             }
             fetchData();
             showSection('votar');
@@ -716,10 +744,11 @@
         }
 
         // ============================================================
-        // MÓDULO NUEVO: GASTOS DE REFRIGERIO
+        // MÓDULO GASTOS DE REFRIGERIO
         // ============================================================
         const PRESUPUESTO_X_PERSONA = 5;
         let gastosState = { gastos: [], comensales: {} };
+        let gastosStaging = []; // Gastos pendientes de grabar
 
         function getHoyStr() {
             const d = new Date();
@@ -736,6 +765,7 @@
                     gastosState.comensales = data.comensales || {};
                 }
             } catch(e) { console.error("Error gastos:", e); }
+            renderStaging();
         }
 
         const getComensalesPorFecha = f => gastosState.comensales[f] || 0;
@@ -770,19 +800,157 @@
             };
         }
 
+        // ============================================================
+        // PRESUPUESTO DEL DÍA
+        // ============================================================
+        function calcularPresupuesto() {
+            const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
+            if (num <= 0) {
+                document.getElementById('g-presupuesto').value = '0.00';
+                return;
+            }
+            document.getElementById('g-presupuesto').value = fmtSoles(num * PRESUPUESTO_X_PERSONA);
+        }
+
+        async function guardarComensales() {
+            const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
+            if (num <= 0) return alert("Ingresa un número de comensales válido antes de guardar.");
+
+            const fecha = getHoyStr();
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'setComensalesRefrigerio', fecha, num })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    gastosState.gastos = data.gastos || [];
+                    gastosState.comensales = data.comensales || {};
+                    // Limpiar inputs del presupuesto
+                    document.getElementById('g-num-comensales').value = '';
+                    document.getElementById('g-presupuesto').value = '';
+                    renderGastosSeccion();
+                    renderReportesSeccion();
+                } else {
+                    alert(data.message || "Error al guardar");
+                }
+            } catch(e) {
+                alert("Error de conexión");
+            }
+        }
+
+        // ============================================================
+        // AGREGAR GASTO CON STAGING
+        // ============================================================
+        function anadirGastoStaging() {
+            const fecha = document.getElementById('g-fecha').value;
+            const concepto = document.getElementById('g-concepto').value.trim();
+            const monto = parseFloat(document.getElementById('g-monto').value);
+
+            if (!fecha) return alert("Selecciona una fecha");
+            if (!concepto) return alert("Ingresa un concepto");
+            if (isNaN(monto) || monto <= 0) return alert("Ingresa un monto válido");
+
+            gastosStaging.push({ fecha, concepto, monto });
+
+            // Solo limpiamos concepto y monto (mantenemos fecha para añadir varios rápido)
+            document.getElementById('g-concepto').value = '';
+            document.getElementById('g-monto').value = '';
+            document.getElementById('g-concepto').focus();
+
+            renderStaging();
+        }
+
+        function quitarGastoStaging(index) {
+            gastosStaging.splice(index, 1);
+            renderStaging();
+        }
+
+        function renderStaging() {
+            const tbody = document.getElementById('g-staging-tabla');
+            const totalEl = document.getElementById('g-staging-total');
+            const btnGrabar = document.getElementById('g-btn-grabar');
+            if (!tbody || !totalEl || !btnGrabar) return;
+
+            const total = gastosStaging.reduce((s, g) => s + Number(g.monto), 0);
+            totalEl.textContent = fmtSoles(total) + ' S/';
+
+            if (gastosStaging.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-500 text-xs">Aún no has añadido gastos</td></tr>';
+                btnGrabar.disabled = true;
+            } else {
+                tbody.innerHTML = gastosStaging.map((g, i) => `
+                    <tr class="border-b border-white/10">
+                        <td class="p-2 text-sm">${g.fecha}</td>
+                        <td class="p-2 text-sm">${g.concepto}</td>
+                        <td class="p-2 text-sm text-right font-bold">${fmtSoles(g.monto)}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="quitarGastoStaging(${i})" class="text-red-500 hover:text-red-700 font-bold text-xs">✕</button>
+                        </td>
+                    </tr>`).join('');
+                btnGrabar.disabled = false;
+            }
+        }
+
+        async function grabarGastos() {
+            if (gastosStaging.length === 0) return;
+            const btnGrabar = document.getElementById('g-btn-grabar');
+            const total = gastosStaging.length;
+            btnGrabar.disabled = true;
+            btnGrabar.textContent = 'Grabando...';
+
+            try {
+                const resultados = await Promise.all(gastosStaging.map(g =>
+                    fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'addGastoRefrigerio',
+                            fecha: g.fecha,
+                            concepto: g.concepto,
+                            monto: g.monto
+                        })
+                    }).then(r => r.json())
+                ));
+
+                const errores = resultados.filter(r => !r.success);
+                if (errores.length > 0) {
+                    alert(`⚠️ ${errores.length} de ${total} gasto(s) no se pudieron grabar.`);
+                }
+
+                await fetchGastosData();
+
+                gastosStaging = [];
+                document.getElementById('g-concepto').value = '';
+                document.getElementById('g-monto').value = '';
+                renderStaging();
+                renderGastosSeccion();
+                renderReportesSeccion();
+
+            } catch(e) {
+                alert("Error de conexión al grabar. Algunos gastos pueden no haberse guardado.");
+                await fetchGastosData();
+                renderStaging();
+            } finally {
+                btnGrabar.textContent = 'Grabar';
+                btnGrabar.disabled = gastosStaging.length === 0;
+            }
+        }
+
+        // ============================================================
+        // RENDER DE LA SECCIÓN GASTOS
+        // ============================================================
         function renderGastosSeccion() {
             const hoy = getHoyStr();
             const fechaInput = document.getElementById('g-fecha');
             if (fechaInput && !fechaInput.value) fechaInput.value = hoy;
 
-            const numInput = document.getElementById('g-num-comensales');
-            const presupuestoInput = document.getElementById('g-presupuesto');
-            // Si aún no hay valor cargado, tomamos el guardado para hoy
-            if (numInput && (!numInput.value || numInput.value === '0')) {
-                numInput.value = getComensalesPorFecha(hoy);
+            const numGuardado = getComensalesPorFecha(hoy);
+            const infoEl = document.getElementById('g-comensales-guardados');
+            if (infoEl) {
+                infoEl.textContent = numGuardado > 0
+                    ? `✔️ Comensales ya guardados para hoy: ${numGuardado} (presupuesto: S/ ${fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA)})`
+                    : 'ℹ️ Aún no hay comensales guardados para hoy.';
             }
-            const num = parseInt(numInput?.value) || 0;
-            if (presupuestoInput) presupuestoInput.value = fmtSoles(num * PRESUPUESTO_X_PERSONA);
 
             const ahorro = getPresupuestoDiario(hoy) - getGastosPorFecha(hoy).reduce((s,g) => s + Number(g.monto), 0);
             const ahorroEl = document.getElementById('g-ahorro');
@@ -795,7 +963,7 @@
             if (tbody) {
                 const gastosHoy = getGastosPorFecha(hoy);
                 tbody.innerHTML = gastosHoy.length === 0
-                    ? '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos registrados hoy</td></tr>'
+                    ? '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos grabados hoy</td></tr>'
                     : gastosHoy.map(g => `
                         <tr class="border-b border-white/10">
                             <td class="p-3 text-sm">${g.fecha}</td>
@@ -803,12 +971,13 @@
                             <td class="p-3 text-sm text-right font-bold">${fmtSoles(g.monto)}</td>
                         </tr>`).join('');
             }
+
+            renderStaging();
         }
 
         function renderReportesSeccion() {
             const desdeInput = document.getElementById('r-desde');
             const hastaInput = document.getElementById('r-hasta');
-            // Defaults si están vacíos
             if (desdeInput && !desdeInput.value) {
                 const d = new Date(); d.setDate(d.getDate() - 30);
                 desdeInput.value = d.toISOString().slice(0,10);
@@ -834,57 +1003,6 @@
             const mesAhorroEl = document.getElementById('r-mes-ahorro');
             mesAhorroEl.textContent = fmtSoles(indMes.ahorro);
             mesAhorroEl.className = 'text-3xl font-black ' + (indMes.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
-        }
-
-        async function guardarComensales() {
-            const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
-            const fecha = getHoyStr();
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'setComensalesRefrigerio', fecha, num })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    gastosState.gastos = data.gastos || [];
-                    gastosState.comensales = data.comensales || {};
-                    renderGastosSeccion();
-                } else {
-                    alert(data.message || "Error al guardar");
-                }
-            } catch(e) {
-                alert("Error de conexión");
-            }
-        }
-
-        async function agregarGasto() {
-            const fecha = document.getElementById('g-fecha').value;
-            const concepto = document.getElementById('g-concepto').value.trim();
-            const monto = parseFloat(document.getElementById('g-monto').value);
-
-            if (!fecha) return alert("Selecciona una fecha");
-            if (!concepto) return alert("Ingresa un concepto");
-            if (isNaN(monto) || monto <= 0) return alert("Ingresa un monto válido");
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'addGastoRefrigerio', fecha, concepto, monto })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    gastosState.gastos = data.gastos || [];
-                    gastosState.comensales = data.comensales || {};
-                    document.getElementById('g-concepto').value = '';
-                    document.getElementById('g-monto').value = '';
-                    renderGastosSeccion();
-                    renderReportesSeccion();
-                } else {
-                    alert(data.message || "Error al guardar");
-                }
-            } catch(e) {
-                alert("Error de conexión");
-            }
         }
     </script>
 </body>
