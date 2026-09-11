@@ -152,7 +152,7 @@
             </section>
 
             <!-- ============================================================ -->
-            <!-- SECCIÓN GASTOS DE REFRIGERIO (CON STAGING)                    -->
+            <!-- SECCIÓN GASTOS DE REFRIGERIO                                  -->
             <!-- ============================================================ -->
             <section id="gastos" class="section-content hidden">
                 <header class="mb-10">
@@ -166,7 +166,7 @@
                     <div class="grid gap-4 md:grid-cols-4 items-end">
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nº de comensales</label>
-                            <input type="number" id="g-num-comensales" min="0" step="1" placeholder="0" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                            <input type="number" id="g-num-comensales" min="0" step="1" placeholder="0" oninput="renderAhorroPreview()" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
                         </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Presupuesto (S/)</label>
@@ -225,12 +225,20 @@
                     </div>
                 </div>
 
-                <!-- Ahorro del día (gastos YA grabados) -->
-                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
-                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
-                        <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día (gastos grabados)</h3>
+                <!-- Previsualización de Ahorro del Día -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día (previsualización)</h3>
+                            <p class="text-[10px] text-slate-500 italic mt-1">Presupuesto calculado − gastos por grabar. Se reinicia al guardar y grabar.</p>
+                        </div>
                         <span id="g-ahorro" class="text-3xl font-black text-slate-800">0.00 S/</span>
                     </div>
+                </div>
+
+                <!-- Gastos ya grabados hoy -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
+                    <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">📌 Gastos grabados hoy</h3>
                     <div class="overflow-x-auto max-h-72 overflow-y-auto rounded-xl bg-white/20">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-purple-950/5 text-purple-900 font-bold uppercase text-[10px] sticky top-0">
@@ -289,7 +297,7 @@
                 </div>
 
                 <!-- Mes en curso -->
-                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
+                <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">📆 Indicadores del mes en curso</h3>
                     <div class="grid gap-6 md:grid-cols-3">
                         <div class="bg-white/30 p-5 rounded-2xl border border-white/20">
@@ -307,6 +315,26 @@
                             <div id="r-mes-ahorro" class="text-3xl font-black text-green-600">0.00</div>
                             <div class="text-[10px] text-slate-500 uppercase">Soles</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ====== NUEVO: Desglose de gastos del rango ====== -->
+                <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                        <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">📋 Desglose de gastos en el rango</h3>
+                        <span id="r-desglose-count" class="bg-purple-100 text-purple-900 text-[10px] font-bold px-3 py-1 rounded-full">0 registros</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto rounded-xl bg-white/20">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-purple-950/5 text-purple-900 font-bold uppercase text-[10px] sticky top-0">
+                                <tr>
+                                    <th class="p-3">Fecha</th>
+                                    <th class="p-3">Concepto</th>
+                                    <th class="p-3 text-right">Monto (S/)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="r-tabla-desglose" class="bg-white/30"></tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -748,7 +776,7 @@
         // ============================================================
         const PRESUPUESTO_X_PERSONA = 5;
         let gastosState = { gastos: [], comensales: {} };
-        let gastosStaging = []; // Gastos pendientes de grabar
+        let gastosStaging = [];
 
         function getHoyStr() {
             const d = new Date();
@@ -807,9 +835,11 @@
             const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
             if (num <= 0) {
                 document.getElementById('g-presupuesto').value = '0.00';
+                renderAhorroPreview();
                 return;
             }
             document.getElementById('g-presupuesto').value = fmtSoles(num * PRESUPUESTO_X_PERSONA);
+            renderAhorroPreview();
         }
 
         async function guardarComensales() {
@@ -826,7 +856,7 @@
                 if (data.success) {
                     gastosState.gastos = data.gastos || [];
                     gastosState.comensales = data.comensales || {};
-                    // Limpiar inputs del presupuesto
+                    // Limpiar inputs del presupuesto → el ahorro vuelve a 0 si no hay staging
                     document.getElementById('g-num-comensales').value = '';
                     document.getElementById('g-presupuesto').value = '';
                     renderGastosSeccion();
@@ -853,17 +883,18 @@
 
             gastosStaging.push({ fecha, concepto, monto });
 
-            // Solo limpiamos concepto y monto (mantenemos fecha para añadir varios rápido)
             document.getElementById('g-concepto').value = '';
             document.getElementById('g-monto').value = '';
             document.getElementById('g-concepto').focus();
 
             renderStaging();
+            renderAhorroPreview();
         }
 
         function quitarGastoStaging(index) {
             gastosStaging.splice(index, 1);
             renderStaging();
+            renderAhorroPreview();
         }
 
         function renderStaging() {
@@ -889,6 +920,20 @@
                         </td>
                     </tr>`).join('');
                 btnGrabar.disabled = false;
+            }
+        }
+
+        // Previsualización del ahorro del día = presupuesto calculado − staging
+        function renderAhorroPreview() {
+            const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
+            const presupuesto = num * PRESUPUESTO_X_PERSONA;
+            const totalStaging = gastosStaging.reduce((s, g) => s + Number(g.monto), 0);
+            const ahorro = presupuesto - totalStaging;
+
+            const ahorroEl = document.getElementById('g-ahorro');
+            if (ahorroEl) {
+                ahorroEl.textContent = fmtSoles(ahorro) + ' S/';
+                ahorroEl.className = 'text-3xl font-black ' + (ahorro >= 0 ? 'text-green-600' : 'text-red-600');
             }
         }
 
@@ -923,6 +968,7 @@
                 document.getElementById('g-concepto').value = '';
                 document.getElementById('g-monto').value = '';
                 renderStaging();
+                renderAhorroPreview();
                 renderGastosSeccion();
                 renderReportesSeccion();
 
@@ -930,6 +976,7 @@
                 alert("Error de conexión al grabar. Algunos gastos pueden no haberse guardado.");
                 await fetchGastosData();
                 renderStaging();
+                renderAhorroPreview();
             } finally {
                 btnGrabar.textContent = 'Grabar';
                 btnGrabar.disabled = gastosStaging.length === 0;
@@ -952,13 +999,7 @@
                     : 'ℹ️ Aún no hay comensales guardados para hoy.';
             }
 
-            const ahorro = getPresupuestoDiario(hoy) - getGastosPorFecha(hoy).reduce((s,g) => s + Number(g.monto), 0);
-            const ahorroEl = document.getElementById('g-ahorro');
-            if (ahorroEl) {
-                ahorroEl.textContent = fmtSoles(ahorro) + ' S/';
-                ahorroEl.className = 'text-3xl font-black ' + (ahorro >= 0 ? 'text-green-600' : 'text-red-600');
-            }
-
+            // Tabla de gastos YA grabados hoy
             const tbody = document.getElementById('g-tabla-hoy');
             if (tbody) {
                 const gastosHoy = getGastosPorFecha(hoy);
@@ -973,8 +1014,12 @@
             }
 
             renderStaging();
+            renderAhorroPreview();
         }
 
+        // ============================================================
+        // RENDER DE LA SECCIÓN REPORTES
+        // ============================================================
         function renderReportesSeccion() {
             const desdeInput = document.getElementById('r-desde');
             const hastaInput = document.getElementById('r-hasta');
@@ -985,6 +1030,8 @@
             if (hastaInput && !hastaInput.value) hastaInput.value = getHoyStr();
 
             const desde = desdeInput.value, hasta = hastaInput.value;
+
+            // Indicadores del rango filtrado
             if (desde && hasta) {
                 const ind = calcularIndicadoresGastos(desde, hasta);
                 document.getElementById('r-filtro-total').textContent = fmtSoles(ind.totalGasto);
@@ -994,6 +1041,7 @@
                 ahorroEl.className = 'text-3xl font-black ' + (ind.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
             }
 
+            // Indicadores del mes en curso
             const d = new Date();
             const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0');
             const ultimo = new Date(y, d.getMonth()+1, 0).getDate();
@@ -1003,6 +1051,28 @@
             const mesAhorroEl = document.getElementById('r-mes-ahorro');
             mesAhorroEl.textContent = fmtSoles(indMes.ahorro);
             mesAhorroEl.className = 'text-3xl font-black ' + (indMes.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
+
+            // ====== DESGLOSE DE GASTOS DEL RANGO ======
+            const tbodyDesglose = document.getElementById('r-tabla-desglose');
+            const countEl = document.getElementById('r-desglose-count');
+            if (tbodyDesglose) {
+                const gastosFiltrados = (desde && hasta)
+                    ? getGastosEnRango(desde, hasta).slice().sort((a,b) => a.fecha.localeCompare(b.fecha))
+                    : [];
+
+                if (countEl) countEl.textContent = `${gastosFiltrados.length} registro${gastosFiltrados.length === 1 ? '' : 's'}`;
+
+                if (gastosFiltrados.length === 0) {
+                    tbodyDesglose.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos en el rango seleccionado</td></tr>';
+                } else {
+                    tbodyDesglose.innerHTML = gastosFiltrados.map(g => `
+                        <tr class="border-b border-white/10 hover:bg-white/10 transition">
+                            <td class="p-3 text-sm">${g.fecha}</td>
+                            <td class="p-3 text-sm">${g.concepto || ''}</td>
+                            <td class="p-3 text-sm text-right font-bold">${fmtSoles(g.monto)}</td>
+                        </tr>`).join('');
+                }
+            }
         }
     </script>
 </body>
