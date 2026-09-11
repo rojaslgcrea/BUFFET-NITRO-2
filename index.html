@@ -318,7 +318,7 @@
                     </div>
                 </div>
 
-                <!-- ====== NUEVO: Desglose de gastos del rango ====== -->
+                <!-- Desglose de gastos del rango -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl transition-all-suave hover-elevate">
                     <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
                         <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">📋 Desglose de gastos en el rango</h3>
@@ -383,7 +383,7 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyJe8YvqCHyq-R4SlGE0KwvMYrWF4OItpeYUh_R4TcTusj0H4n9B9KtpukpObQBpSM/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbyaOffJNul5IFlK7ji5MzXhlPJm3kctcXDbDs22d3_Inc-f38w5L50bJyppWU_t8as/exec"; 
         let currentUser = JSON.parse(localStorage.getItem('buffet_session'));
         let sessionVerificationInterval = null;
 
@@ -856,7 +856,6 @@
                 if (data.success) {
                     gastosState.gastos = data.gastos || [];
                     gastosState.comensales = data.comensales || {};
-                    // Limpiar inputs del presupuesto → el ahorro vuelve a 0 si no hay staging
                     document.getElementById('g-num-comensales').value = '';
                     document.getElementById('g-presupuesto').value = '';
                     renderGastosSeccion();
@@ -923,7 +922,6 @@
             }
         }
 
-        // Previsualización del ahorro del día = presupuesto calculado − staging
         function renderAhorroPreview() {
             const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
             const presupuesto = num * PRESUPUESTO_X_PERSONA;
@@ -942,38 +940,35 @@
             const btnGrabar = document.getElementById('g-btn-grabar');
             const total = gastosStaging.length;
             btnGrabar.disabled = true;
-            btnGrabar.textContent = 'Grabando...';
+            btnGrabar.textContent = `Grabando ${total}...`;
 
             try {
-                const resultados = await Promise.all(gastosStaging.map(g =>
-                    fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'addGastoRefrigerio',
-                            fecha: g.fecha,
-                            concepto: g.concepto,
-                            monto: g.monto
-                        })
-                    }).then(r => r.json())
-                ));
+                // UNA SOLA petición con todo el lote
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'addGastosRefrigerio',
+                        gastos: gastosStaging
+                    })
+                });
+                const data = await res.json();
 
-                const errores = resultados.filter(r => !r.success);
-                if (errores.length > 0) {
-                    alert(`⚠️ ${errores.length} de ${total} gasto(s) no se pudieron grabar.`);
+                if (data.success) {
+                    gastosState.gastos = data.gastos || [];
+                    gastosState.comensales = data.comensales || {};
+                    gastosStaging = [];
+                    document.getElementById('g-concepto').value = '';
+                    document.getElementById('g-monto').value = '';
+                    renderStaging();
+                    renderAhorroPreview();
+                    renderGastosSeccion();
+                    renderReportesSeccion();
+                } else {
+                    alert(data.message || "Error al grabar");
                 }
-
-                await fetchGastosData();
-
-                gastosStaging = [];
-                document.getElementById('g-concepto').value = '';
-                document.getElementById('g-monto').value = '';
-                renderStaging();
-                renderAhorroPreview();
-                renderGastosSeccion();
-                renderReportesSeccion();
-
             } catch(e) {
-                alert("Error de conexión al grabar. Algunos gastos pueden no haberse guardado.");
+                console.error("Error grabando gastos:", e);
+                alert("Error de conexión al grabar. Intenta de nuevo.");
                 await fetchGastosData();
                 renderStaging();
                 renderAhorroPreview();
@@ -999,7 +994,6 @@
                     : 'ℹ️ Aún no hay comensales guardados para hoy.';
             }
 
-            // Tabla de gastos YA grabados hoy
             const tbody = document.getElementById('g-tabla-hoy');
             if (tbody) {
                 const gastosHoy = getGastosPorFecha(hoy);
@@ -1052,7 +1046,7 @@
             mesAhorroEl.textContent = fmtSoles(indMes.ahorro);
             mesAhorroEl.className = 'text-3xl font-black ' + (indMes.ahorro >= 0 ? 'text-green-600' : 'text-red-600');
 
-            // ====== DESGLOSE DE GASTOS DEL RANGO ======
+            // Desglose de gastos del rango
             const tbodyDesglose = document.getElementById('r-tabla-desglose');
             const countEl = document.getElementById('r-desglose-count');
             if (tbodyDesglose) {
