@@ -331,11 +331,14 @@
 
     <script>
         // ============================================================
-        // CONFIGURACIÓN DE SUPABASE (REEMPLAZAR CON TUS DATOS)
+        // CONFIGURACIÓN DE SUPABASE
         // ============================================================
         const SUPABASE_URL = 'https://iinvzyuryznwwwgddpjd.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpbnZ6eXVyeXpud3d3Z2RkcGpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDExNDgsImV4cCI6MjEwNTU3NzE0OH0.6b1s8QPne7gwF8fmJWFeQD73lbTQumzpSlV2ziOH7AM';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ⚠️ IMPORTANTE: la variable se llama supabaseClient (no supabase)
+        // porque el SDK ya crea una variable global 'supabase' y no se puede redeclarar.
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const PRESUPUESTO_X_PERSONA = 5;
         let currentUser = null; // { id, usuario, nombre, rol }
@@ -345,21 +348,21 @@
         // INICIALIZACIÓN: Verificar sesión existente
         // ============================================================
         document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 await cargarPerfilYLogin(session.user);
             }
         });
 
         // Escuchar cambios de sesión (ej: token expirado)
-        supabase.auth.onAuthStateChange((event) => {
+        supabaseClient.auth.onAuthStateChange((event) => {
             if (event === 'SIGNED_OUT') {
                 location.reload();
             }
         });
 
         async function cargarPerfilYLogin(authUser) {
-            const { data: perfil, error } = await supabase
+            const { data: perfil, error } = await supabaseClient
                 .from('perfiles')
                 .select('usuario, nombre, rol')
                 .eq('id', authUser.id)
@@ -367,7 +370,7 @@
 
             if (error || !perfil) {
                 alert("⚠️ Usuario autenticado pero sin perfil asignado. Contacta a RRHH.");
-                await supabase.auth.signOut();
+                await supabaseClient.auth.signOut();
                 return;
             }
 
@@ -392,7 +395,7 @@
             btn.disabled = true;
             btn.textContent = 'Verificando...';
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
                 alert("❌ " + error.message);
@@ -424,7 +427,7 @@
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             location.reload();
         }
 
@@ -433,7 +436,7 @@
         // ============================================================
         async function fetchData() {
             try {
-                const { data: opciones, error } = await supabase
+                const { data: opciones, error } = await supabaseClient
                     .from('opciones')
                     .select('id, categoria, nombre')
                     .eq('activo', true)
@@ -442,7 +445,6 @@
 
                 if (error) throw error;
 
-                // Agrupar por categoría
                 menuCache = {};
                 opciones.forEach(o => {
                     if (!menuCache[o.categoria]) menuCache[o.categoria] = [];
@@ -490,7 +492,6 @@
                 return alert("⚠️ Por favor, selecciona una opción en cada categoría antes de enviar.");
             }
 
-            // Verificar si ya votó en el ciclo actual
             const yaVoto = await yaVotoCicloActual();
             if (yaVoto) {
                 mostrarMensajeYaVoto();
@@ -506,7 +507,7 @@
                     categoria: categoria
                 }));
 
-                const { error } = await supabase.from('votos').insert(votos);
+                const { error } = await supabaseClient.from('votos').insert(votos);
 
                 if (error) {
                     if (error.code === '42501' || error.message.includes('policy')) {
@@ -565,7 +566,7 @@
         async function yaVotoCicloActual() {
             if (!currentUser) return false;
             const { inicio, fin } = getCicloActual();
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('votos')
                 .select('id')
                 .eq('usuario_id', currentUser.id)
@@ -601,12 +602,10 @@
                     return;
                 }
 
-                // Si puede votar, verificar si ya votó y renderizar
                 yaVotoCicloActual().then(yaVoto => {
                     if (yaVoto) {
                         mostrarMensajeYaVoto();
                     } else {
-                        // Renderizar el menú de nuevo por si acaso
                         renderMenu(menuCache);
                     }
                 });
@@ -646,8 +645,7 @@
             try {
                 const { inicio, fin } = getCicloActual();
 
-                // 1. Votos del ciclo actual con información del plato
-                const { data: votos, error: votosError } = await supabase
+                const { data: votos, error: votosError } = await supabaseClient
                     .from('votos')
                     .select('categoria, opcion_id, usuario_id, opciones(nombre)')
                     .gte('fecha_voto', inicio.toISOString())
@@ -655,8 +653,7 @@
 
                 if (votosError) throw votosError;
 
-                // 2. Votantes (todos los perfiles + estado)
-                const { data: perfiles } = await supabase.from('perfiles').select('id, nombre');
+                const { data: perfiles } = await supabaseClient.from('perfiles').select('id, nombre');
                 const votantesSet = new Set(votos.map(v => v.usuario_id));
 
                 if (perfiles && perfiles.length > 0) {
@@ -671,7 +668,6 @@
                         return `<span class="px-4 py-2 rounded-full border text-sm font-medium ${claseColor}">${icono} ${p.nombre}</span>`;
                     }).join('');
 
-                    // Info del ciclo
                     const header = votantesCard.querySelector('.flex.items-center.gap-3.mb-4');
                     if (header) {
                         const old = header.querySelector('.ciclo-info');
@@ -685,9 +681,8 @@
                     votantesCard.classList.add('hidden');
                 }
 
-                // 3. Última comida (ciclo anterior)
                 const cicloAnt = getCicloAnterior();
-                const { data: votosAnt } = await supabase
+                const { data: votosAnt } = await supabaseClient
                     .from('votos')
                     .select('categoria, opcion_id, opciones(nombre)')
                     .gte('fecha_voto', cicloAnt.inicio.toISOString())
@@ -715,7 +710,6 @@
                     ultimaComidaCont.classList.add('hidden');
                 }
 
-                // 4. Resultados del ciclo actual (podios)
                 if (votos.length > 0) {
                     const conteo = {};
                     votos.forEach(v => {
@@ -745,11 +739,10 @@
                     grid.innerHTML = '<p class="col-span-full text-center text-slate-500 py-10">Sin votos registrados en el ciclo actual.</p>';
                 }
 
-                // 5. Top 5 histórico (últimos 2 meses)
                 const hace2Meses = new Date();
                 hace2Meses.setMonth(hace2Meses.getMonth() - 2);
 
-                const { data: hist } = await supabase
+                const { data: hist } = await supabaseClient
                     .from('votos')
                     .select('categoria, opciones(nombre)')
                     .gte('fecha_voto', hace2Meses.toISOString());
@@ -788,7 +781,7 @@
         // ADMIN: USUARIOS
         // ============================================================
         async function renderUsers() {
-            const { data: perfiles, error } = await supabase
+            const { data: perfiles, error } = await supabaseClient
                 .from('perfiles')
                 .select('id, usuario, nombre, rol')
                 .order('nombre');
@@ -807,7 +800,7 @@
 
         async function deleteUser(id, nombre) {
             if (!confirm(`¿Eliminar el perfil de ${nombre}? (El usuario seguirá existiendo en Auth)`)) return;
-            const { error } = await supabase.from('perfiles').delete().eq('id', id);
+            const { error } = await supabaseClient.from('perfiles').delete().eq('id', id);
             if (error) alert("Error: " + error.message);
             else renderUsers();
         }
@@ -838,7 +831,7 @@
             const nombre = document.getElementById('new-opt-nombre').value.trim();
             if (!nombre) return alert("Escribe el nombre del plato.");
 
-            const { error } = await supabase.from('opciones').insert({ categoria, nombre });
+            const { error } = await supabaseClient.from('opciones').insert({ categoria, nombre });
             if (error) {
                 alert("Error: " + error.message);
             } else {
@@ -849,7 +842,7 @@
 
         async function deleteOption(id, nombre) {
             if (!confirm(`¿Eliminar "${nombre}"?`)) return;
-            const { error } = await supabase.from('opciones').delete().eq('id', id);
+            const { error } = await supabaseClient.from('opciones').delete().eq('id', id);
             if (error) alert("Error: " + error.message);
             else fetchData();
         }
@@ -868,11 +861,11 @@
 
         async function fetchGastosData() {
             try {
-                const { data: gastos } = await supabase
+                const { data: gastos } = await supabaseClient
                     .from('gastos_refrigerio')
                     .select('fecha, concepto, monto')
                     .order('fecha');
-                const { data: comensales } = await supabase
+                const { data: comensales } = await supabaseClient
                     .from('comensales_refrigerio')
                     .select('fecha, num');
 
@@ -934,8 +927,7 @@
 
             const fecha = getHoyStr();
 
-            // Upsert: si ya existe la fecha, actualiza; si no, inserta
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('comensales_refrigerio')
                 .upsert({ fecha, num }, { onConflict: 'fecha' });
 
@@ -1020,7 +1012,7 @@
             btnGrabar.disabled = true;
             btnGrabar.textContent = `Grabando ${gastosStaging.length}...`;
 
-            const { error } = await supabase.from('gastos_refrigerio').insert(gastosStaging);
+            const { error } = await supabaseClient.from('gastos_refrigerio').insert(gastosStaging);
 
             if (error) {
                 alert("Error al grabar: " + error.message);
