@@ -121,7 +121,7 @@
                     <p class="text-slate-600 text-sm mt-1">Registra comensales y gastos diarios del buffet. Presupuesto: S/ 5 por persona.</p>
                 </header>
 
-                <!-- TARJETA PRESUPUESTO DEL DÍA MODIFICADA -->
+                <!-- INICIO DEL BLOQUE MODIFICADO -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">🥗 Presupuesto del día</h3>
                     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5 items-end">
@@ -142,6 +142,7 @@
                     </div>
                     <p id="g-comensales-guardados" class="text-[10px] text-slate-500 italic mt-3"></p>
                 </div>
+                <!-- FIN DEL BLOQUE MODIFICADO -->
 
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">➕ Agregar gasto</h3>
@@ -924,24 +925,23 @@
             renderAhorroPreview();
         }
 
-        // NUEVA FUNCIÓN: Cargar datos al cambiar de fecha en Comensales
         function cargarComensalesPorFecha() {
             const fechaInput = document.getElementById('g-fecha-comensales');
             const fecha = fechaInput ? fechaInput.value : getHoyStr();
-            
             if (!fecha) return;
 
             const numGuardado = getComensalesPorFecha(fecha);
             document.getElementById('g-num-comensales').value = numGuardado > 0 ? numGuardado : '';
+            document.getElementById('g-presupuesto').value = numGuardado > 0 ? fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA) : '0.00';
             
-            if (numGuardado > 0) {
-                document.getElementById('g-presupuesto').value = fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA);
-            } else {
-                document.getElementById('g-presupuesto').value = '0.00';
-            }
-
             renderAhorroPreview();
-            renderGastosSeccion(); 
+            
+            const infoEl = document.getElementById('g-comensales-guardados');
+            if (infoEl) {
+                infoEl.textContent = numGuardado > 0
+                    ? `✔️ Comensales ya guardados para el ${fecha}: ${numGuardado} (presupuesto: S/ ${fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA)})`
+                    : `ℹ️ Aún no hay comensales guardados para el ${fecha}.`;
+            }
         }
 
         async function guardarComensales() {
@@ -1060,15 +1060,13 @@
         function renderGastosSeccion() {
             const hoy = getHoyStr();
             
-            // Inicializar fecha del formulario de Gastos (si está vacía)
             const fechaInput = document.getElementById('g-fecha');
             if (fechaInput && !fechaInput.value) fechaInput.value = hoy;
 
-            // Inicializar fecha del formulario de Comensales (si está vacía)
             const fechaComensalesInput = document.getElementById('g-fecha-comensales');
             if (fechaComensalesInput && !fechaComensalesInput.value) {
                 fechaComensalesInput.value = hoy;
-                cargarComensalesPorFecha(); // Carga los datos del día de hoy al entrar
+                cargarComensalesPorFecha();
             }
 
             const fechaSeleccionada = fechaComensalesInput ? fechaComensalesInput.value : hoy;
@@ -1083,7 +1081,7 @@
 
             const tbody = document.getElementById('g-tabla-hoy');
             if (tbody) {
-                const gastosHoy = getGastosPorFecha(hoy); // La tabla de abajo sigue mostrando los de hoy por defecto
+                const gastosHoy = getGastosPorFecha(hoy);
                 tbody.innerHTML = gastosHoy.length === 0
                     ? '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos grabados hoy</td></tr>'
                     : gastosHoy.map(g => `
