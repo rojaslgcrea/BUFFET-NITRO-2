@@ -60,8 +60,8 @@
                 <div class="flex space-x-1 md:space-x-3 text-[10px] md:text-xs font-bold uppercase tracking-wider">
                     <button onclick="showSection('votar')" id="tab-votar" class="nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-all-suave">Votar</button>
                     <button onclick="showSection('resultado')" id="tab-resultado" class="nav-link py-2 px-3 rounded-lg hover:bg-white/5 transition-all-suave">Resultados</button>
-                    <button onclick="showSection('gastos')" id="tab-gastos" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">💰 Gastos</button>
-                    <button onclick="showSection('reportes')" id="tab-reportes" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">📊 Reportes</button>
+                    <button onclick="showSection('gastos')" id="tab-gastos" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave"> Gastos</button>
+                    <button onclick="showSection('reportes')" id="tab-reportes" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave"> Reportes</button>
                     <button id="admin-nav" onclick="showSection('admin')" class="nav-link py-2 px-3 rounded-lg hidden hover:bg-white/5 transition-all-suave">Admin</button>
                     <button onclick="logout()" class="text-purple-300 border-l border-purple-800 pl-3 hover:text-white transition-all-suave">Salir</button>
                 </div>
@@ -121,9 +121,14 @@
                     <p class="text-slate-600 text-sm mt-1">Registra comensales y gastos diarios del buffet. Presupuesto: S/ 5 por persona.</p>
                 </header>
 
+                <!-- TARJETA PRESUPUESTO DEL DÍA MODIFICADA -->
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest mb-4">🥗 Presupuesto del día</h3>
-                    <div class="grid gap-4 md:grid-cols-4 items-end">
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5 items-end">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha</label>
+                            <input type="date" id="g-fecha-comensales" onchange="cargarComensalesPorFecha()" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
+                        </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nº de comensales</label>
                             <input type="number" id="g-num-comensales" min="0" step="1" placeholder="0" oninput="renderAhorroPreview()" class="w-full p-3 bg-white/60 border border-white/30 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 transition-all-suave">
@@ -186,7 +191,7 @@
                 <div class="glass-card p-6 md:p-8 rounded-3xl mb-6 transition-all-suave hover-elevate">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest">💰 Ahorro del día (previsualización)</h3>
+                            <h3 class="text-[10px] font-black text-purple-900 uppercase tracking-widest"> Ahorro del día (previsualización)</h3>
                             <p class="text-[10px] text-slate-500 italic mt-1">Presupuesto calculado − gastos por grabar. Se reinicia al guardar y grabar.</p>
                         </div>
                         <span id="g-ahorro" class="text-3xl font-black text-slate-800">0.00 S/</span>
@@ -336,8 +341,6 @@
         const SUPABASE_URL = 'https://iinvzyuryznwwwgddpjd.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpbnZ6eXVyeXpud3d3Z2RkcGpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDExNDgsImV4cCI6MjEwNTU3NzE0OH0.6b1s8QPne7gwF8fmJWFeQD73lbTQumzpSlV2ziOH7AM';
 
-        // ⚠️ IMPORTANTE: la variable se llama supabaseClient (no supabase)
-        // porque el SDK ya crea una variable global 'supabase' y no se puede redeclarar.
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const PRESUPUESTO_X_PERSONA = 5;
@@ -921,11 +924,33 @@
             renderAhorroPreview();
         }
 
+        // NUEVA FUNCIÓN: Cargar datos al cambiar de fecha en Comensales
+        function cargarComensalesPorFecha() {
+            const fechaInput = document.getElementById('g-fecha-comensales');
+            const fecha = fechaInput ? fechaInput.value : getHoyStr();
+            
+            if (!fecha) return;
+
+            const numGuardado = getComensalesPorFecha(fecha);
+            document.getElementById('g-num-comensales').value = numGuardado > 0 ? numGuardado : '';
+            
+            if (numGuardado > 0) {
+                document.getElementById('g-presupuesto').value = fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA);
+            } else {
+                document.getElementById('g-presupuesto').value = '0.00';
+            }
+
+            renderAhorroPreview();
+            renderGastosSeccion(); 
+        }
+
         async function guardarComensales() {
             const num = parseInt(document.getElementById('g-num-comensales').value) || 0;
-            if (num <= 0) return alert("Ingresa un número de comensales válido antes de guardar.");
+            const fechaInput = document.getElementById('g-fecha-comensales');
+            const fecha = fechaInput ? fechaInput.value : getHoyStr();
 
-            const fecha = getHoyStr();
+            if (!fecha) return alert("Selecciona una fecha válida.");
+            if (num <= 0) return alert("Ingresa un número de comensales válido antes de guardar.");
 
             const { error } = await supabaseClient
                 .from('comensales_refrigerio')
@@ -1034,20 +1059,31 @@
 
         function renderGastosSeccion() {
             const hoy = getHoyStr();
+            
+            // Inicializar fecha del formulario de Gastos (si está vacía)
             const fechaInput = document.getElementById('g-fecha');
             if (fechaInput && !fechaInput.value) fechaInput.value = hoy;
 
-            const numGuardado = getComensalesPorFecha(hoy);
+            // Inicializar fecha del formulario de Comensales (si está vacía)
+            const fechaComensalesInput = document.getElementById('g-fecha-comensales');
+            if (fechaComensalesInput && !fechaComensalesInput.value) {
+                fechaComensalesInput.value = hoy;
+                cargarComensalesPorFecha(); // Carga los datos del día de hoy al entrar
+            }
+
+            const fechaSeleccionada = fechaComensalesInput ? fechaComensalesInput.value : hoy;
+            const numGuardado = getComensalesPorFecha(fechaSeleccionada);
+            
             const infoEl = document.getElementById('g-comensales-guardados');
             if (infoEl) {
                 infoEl.textContent = numGuardado > 0
-                    ? `✔️ Comensales ya guardados para hoy: ${numGuardado} (presupuesto: S/ ${fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA)})`
-                    : 'ℹ️ Aún no hay comensales guardados para hoy.';
+                    ? `✔️ Comensales ya guardados para el ${fechaSeleccionada}: ${numGuardado} (presupuesto: S/ ${fmtSoles(numGuardado * PRESUPUESTO_X_PERSONA)})`
+                    : `ℹ️ Aún no hay comensales guardados para el ${fechaSeleccionada}.`;
             }
 
             const tbody = document.getElementById('g-tabla-hoy');
             if (tbody) {
-                const gastosHoy = getGastosPorFecha(hoy);
+                const gastosHoy = getGastosPorFecha(hoy); // La tabla de abajo sigue mostrando los de hoy por defecto
                 tbody.innerHTML = gastosHoy.length === 0
                     ? '<tr><td colspan="3" class="p-4 text-center text-slate-500 text-sm">Sin gastos grabados hoy</td></tr>'
                     : gastosHoy.map(g => `
